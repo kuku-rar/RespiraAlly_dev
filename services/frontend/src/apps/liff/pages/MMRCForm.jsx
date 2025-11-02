@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAccessibility } from "../../../shared/contexts/AccessibilityContext";
 import bgImageUrl from "@assets/毛玻璃_BG2.png";
@@ -61,6 +61,14 @@ const MMRCForm = () => {
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Auto-speak instructions when form loads
+  useEffect(() => {
+    if (enableVoice) {
+      const instructionText = '呼吸困難評估表單。請根據您最近一週的感受，選擇最符合的項目。這將幫助我們了解您的呼吸狀況。';
+      speak(instructionText);
+    }
+  }, [enableVoice, speak]);
 
   const handleSelect = (grade) => {
     setSelectedGrade(grade);

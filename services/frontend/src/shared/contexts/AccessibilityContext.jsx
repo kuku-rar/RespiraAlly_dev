@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 
 const AccessibilityContext = createContext({});
 
@@ -18,10 +18,16 @@ export const AccessibilityProvider = ({ children }) => {
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [isLargeText, setIsLargeText] = useState(false);
 
-  // 語音無障礙狀態
+  // 語音無障礙狀態 (TTS)
   const [enableVoice, setEnableVoice] = useState(false);
   const [voiceRate, setVoiceRate] = useState(0.9);
   const [voiceVolume, setVoiceVolume] = useState(1);
+
+  // 語音輸入狀態 (STT)
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [isRecognitionSupported, setIsRecognitionSupported] = useState(false);
+  const recognitionRef = useRef(null);
 
   // 載入儲存的無障礙設定
   useEffect(() => {
@@ -50,6 +56,57 @@ export const AccessibilityProvider = ({ children }) => {
       "data-text-size",
       savedLargeText ? "large" : "normal"
     );
+  }, []);
+
+  // Initialize Speech Recognition API
+  useEffect(() => {
+    // Check browser support for Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      setIsRecognitionSupported(true);
+      const recognition = new SpeechRecognition();
+
+      // Configure recognition
+      recognition.lang = 'zh-TW';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 3;
+
+      // Handle recognition results
+      recognition.onresult = (event) => {
+        const result = event.results[0][0].transcript;
+        setTranscript(result);
+        setIsListening(false);
+      };
+
+      // Handle recognition errors
+      recognition.onerror = (event) => {
+        console.warn('Speech recognition error:', event.error);
+        setIsListening(false);
+
+        if (event.error === 'no-speech') {
+          console.log('No speech detected, please try again');
+        }
+      };
+
+      // Handle recognition end
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    } else {
+      console.warn('Speech Recognition API not supported in this browser');
+      setIsRecognitionSupported(false);
+    }
+
+    // Cleanup
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
   }, []);
 
   // 切換高對比度
@@ -126,6 +183,52 @@ export const AccessibilityProvider = ({ children }) => {
     return window.speechSynthesis ? window.speechSynthesis.speaking : false;
   };
 
+  // Start speech recognition
+  const startListening = useCallback((onResult) => {
+    if (!isRecognitionSupported || !recognitionRef.current) {
+      console.warn('Speech recognition not available');
+      return;
+    }
+
+    if (isListening) {
+      console.log('Already listening');
+      return;
+    }
+
+    // Clear previous transcript
+    setTranscript("");
+
+    // Set up result handler if provided
+    if (onResult && typeof onResult === 'function') {
+      recognitionRef.current.onresult = (event) => {
+        const result = event.results[0][0].transcript;
+        setTranscript(result);
+        setIsListening(false);
+        onResult(result);
+      };
+    }
+
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (error) {
+      console.error('Failed to start speech recognition:', error);
+      setIsListening(false);
+    }
+  }, [isRecognitionSupported, isListening]);
+
+  // Stop speech recognition
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current && isListening) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error('Failed to stop speech recognition:', error);
+      }
+      setIsListening(false);
+    }
+  }, [isListening]);
+
   const value = {
     // 視覺無障礙
     isHighContrast,
@@ -133,7 +236,7 @@ export const AccessibilityProvider = ({ children }) => {
     toggleHighContrast,
     toggleLargeText,
 
-    // 語音無障礙
+    // 語音無障礙 (TTS)
     enableVoice,
     voiceRate,
     voiceVolume,
@@ -142,6 +245,13 @@ export const AccessibilityProvider = ({ children }) => {
     speak,
     stopSpeaking,
     isSpeaking,
+
+    // 語音輸入 (STT)
+    isListening,
+    transcript,
+    isRecognitionSupported,
+    startListening,
+    stopListening,
   };
 
   return (

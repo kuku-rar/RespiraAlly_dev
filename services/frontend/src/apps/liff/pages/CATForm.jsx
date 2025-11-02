@@ -149,7 +149,10 @@ const CATForm = () => {
   useEffect(() => {
     // 語音播報當前題目
     if (enableVoice && CAT_QUESTIONS[currentQuestion]) {
-      speak(CAT_QUESTIONS[currentQuestion].question);
+      const question = CAT_QUESTIONS[currentQuestion];
+      // Speak full question with scale context
+      const fullText = `第 ${currentQuestion + 1} 題，${question.question}，從 ${question.leftText} 到 ${question.rightText}。`;
+      speak(fullText);
     }
   }, [currentQuestion, enableVoice, speak]);
 
