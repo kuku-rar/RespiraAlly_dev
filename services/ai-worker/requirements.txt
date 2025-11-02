@@ -11,6 +11,7 @@ minio
 pika
 pymilvus
 redis
+SQLAlchemy
 
 # --- Audio & Utilities ---
 mutagen==1.47.0

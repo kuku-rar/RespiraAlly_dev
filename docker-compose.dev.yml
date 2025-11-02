@@ -17,7 +17,7 @@ services:
       - dev_pgdata:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "15432:5432"
+      - "25432:5432"  # 修改為 25432 避免衝突
     restart: unless-stopped
     healthcheck:
       test:
@@ -32,7 +32,7 @@ services:
     volumes:
       - dev_redisdata:/data
     ports:
-      - "6379:6379"
+      - "6380:6379"  # 修改為 6380 避免衝突
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -49,8 +49,8 @@ services:
     volumes:
       - dev_rabbitmq_data:/var/lib/rabbitmq
     ports:
-      - "15673:5672" # 將主機埠改為 15673，避開 Windows 預留區
-      - "15672:15672"
+      - "15674:5672" # 修改為 15674 避免衝突
+      - "15673:15672"  # 修改為 15673 避免衝突
     restart: unless-stopped
 
   etcd:
@@ -120,7 +120,7 @@ services:
     entrypoint: >
       sh -lc "flask db upgrade heads && flask run --host=0.0.0.0 --port=5000 --debug"
     ports:
-      - "5000:5000"
+      - "5001:5000"  # 修改為 5001 避免衝突
     env_file:
       - .env
     volumes:
