@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, List
+from typing import Dict, List, Type
 
 from crewai.tools import BaseTool
 from openai import OpenAI
@@ -21,7 +21,7 @@ class MemoryGateToolSchema(BaseModel):
 class MemoryGateTool(BaseTool):
     name: str = "memory_gate"
     description: str = "判斷是否需要檢索個人長期記憶。只輸出 USE 或 SKIP。"
-    args_schema = MemoryGateToolSchema
+    args_schema: Type[BaseModel] = MemoryGateToolSchema
 
     def _run(self, text: str) -> str:
         try:
@@ -85,7 +85,7 @@ class SearchMilvusTool(BaseTool):
         "生活衛教、自我照護等）或你對答案來源不確定時，先呼叫本工具。工具會回傳一段可直接拼入"
         "提示詞的『參考資料』區塊，內含相似度最高的一筆 Q&A 與使用說明，供你理解並轉述整合。"
     )
-    args_schema = SearchMilvusToolSchema
+    args_schema: Type[BaseModel] = SearchMilvusToolSchema
 
     def _run(self, query: str, topk: int = 5) -> str:
         global _milvus_loaded, _collection
@@ -209,7 +209,7 @@ class AlertCaseManagerTool(BaseTool):
         "【用法】以 JSON 傳入 {'reason': 'EMERGENCY: <極簡原因>'}；"
         "用戶ID由系統自動填入，無需提供。"
     )
-    args_schema = AlertCaseManagerToolSchema  # ★ 關鍵：明確宣告參數鍵
+    args_schema: Type[BaseModel] = AlertCaseManagerToolSchema  # ★ 關鍵：明確宣告參數鍵
 
     def _run(self, reason: str) -> str:
         # 安全地抓 user_id；CrewAI 預設沒有 runtime_context
