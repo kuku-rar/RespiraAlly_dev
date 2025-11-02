@@ -76,6 +76,11 @@ VibeCoding_Workflow_Templates/
 ## 運行時產生的內容
 # .claude/context/ 下的動態報告檔案
 .claude/
+# TaskMaster 配置需要被追蹤
+!.claude/taskmaster-data/
+!.claude/taskmaster-data/*.json
+!.claude/taskmaster-data/*.md
+
 .gemini/
 .claude/context/*/report-*.md
 .claude/context/*/analysis-*.md
