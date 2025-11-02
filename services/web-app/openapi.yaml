@@ -1,0 +1,1168 @@
+openapi: 3.0.3
+info:
+  title: RespiraAlly API
+  description: API for the RespiraAlly respiratory care management system
+  version: 1.0.0
+  contact:
+    name: RespiraAlly Team
+    email: support@respiraally.com
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Development server
+  - url: https://api.respiraally.com/api/v1
+    description: Production server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_INPUT"
+            message:
+              type: string
+              example: "Request body cannot be empty"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        account:
+          type: string
+          example: "admin"
+        first_name:
+          type: string
+          example: "思敏"
+        last_name:
+          type: string
+          example: "王"
+        email:
+          type: string
+          example: "sumin.wang@example.com"
+        is_staff:
+          type: boolean
+          example: true
+        is_admin:
+          type: boolean
+          example: false
+
+    Patient:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 123
+        first_name:
+          type: string
+          example: "美麗"
+        last_name:
+          type: string
+          example: "陳"
+        gender:
+          type: string
+          example: "female"
+        email:
+          type: string
+          example: "meili.chen@example.com"
+        phone:
+          type: string
+          example: "0987654321"
+        health_profile:
+          $ref: '#/components/schemas/HealthProfile'
+
+    HealthProfile:
+      type: object
+      properties:
+        height_cm:
+          type: integer
+          example: 160
+        weight_kg:
+          type: integer
+          example: 55
+        smoke_status:
+          type: string
+          enum: [never, former, current]
+          example: "never"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
+
+    CATQuestionnaire:
+      type: object
+      properties:
+        record_id:
+          type: integer
+          example: 1
+        record_date:
+          type: string
+          format: date
+          example: "2025-01-15"
+        total_score:
+          type: integer
+          example: 15
+        scores:
+          type: object
+          properties:
+            cough:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 2
+            phlegm:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 1
+            chest:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 3
+            breath:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 2
+            limit:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 1
+            confidence:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 2
+            sleep:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 2
+            energy:
+              type: integer
+              minimum: 0
+              maximum: 5
+              example: 2
+
+    MMRCQuestionnaire:
+      type: object
+      properties:
+        record_id:
+          type: integer
+          example: 1
+        record_date:
+          type: string
+          format: date
+          example: "2025-01-15"
+        score:
+          type: integer
+          minimum: 0
+          maximum: 4
+          example: 2
+        answer_text:
+          type: string
+          example: "我感到有點氣喘"
+
+    DailyMetric:
+      type: object
+      properties:
+        log_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:30:00Z"
+        water_cc:
+          type: integer
+          example: 2000
+        medication:
+          type: boolean
+          example: true
+        exercise_min:
+          type: integer
+          example: 30
+        cigarettes:
+          type: integer
+          example: 0
+
+    PaginationMeta:
+      type: object
+      properties:
+        total_items:
+          type: integer
+          example: 100
+        total_pages:
+          type: integer
+          example: 10
+        current_page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 10
+
+paths:
+  # Authentication endpoints
+  /auth/login:
+    post:
+      summary: "呼吸治療師登入"
+      description: "供呼吸治療師使用帳號密碼進行登入"
+      tags: ["Authentication"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account, password]
+              properties:
+                account:
+                  type: string
+                  example: "admin"
+                password:
+                  type: string
+                  format: password
+                  example: "admin"
+      responses:
+        '200':
+          description: "登入成功"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                      expires_in:
+                        type: number
+                        example: 3600
+                      user:
+                        $ref: '#/components/schemas/User'
+        '400':
+          description: "請求格式錯誤"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: "帳號或密碼錯誤"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/line/login:
+    post:
+      summary: "患者 LIFF 登入"
+      description: "供已註冊的患者在 LIFF 環境中，使用 lineUserId 進行登入"
+      tags: ["Authentication"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lineUserId]
+              properties:
+                lineUserId:
+                  type: string
+                  example: "U123456789abcdef123456789abcdef"
+      responses:
+        '200':
+          description: "登入成功"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      expires_in:
+                        type: number
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          line_user_id:
+                            type: string
+                          first_name:
+                            type: string
+                          last_name:
+                            type: string
+                          health_profile:
+                            $ref: '#/components/schemas/HealthProfile'
+        '400':
+          description: "lineUserId 缺失"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: "使用者未註冊"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/line/register:
+    post:
+      summary: "患者 LIFF 註冊"
+      description: "供新患者在 LIFF 環境中，使用 lineUserId 並填寫基本資料以完成註冊"
+      tags: ["Authentication"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lineUserId, first_name, last_name]
+              properties:
+                lineUserId:
+                  type: string
+                  example: "U_new_user_abcdef123456"
+                first_name:
+                  type: string
+                  example: "美麗"
+                last_name:
+                  type: string
+                  example: "陳"
+                gender:
+                  type: string
+                  example: "female"
+                phone:
+                  type: string
+                  example: "0987654321"
+                height_cm:
+                  type: integer
+                  example: 160
+                weight_kg:
+                  type: integer
+                  example: 55
+                smoke_status:
+                  type: string
+                  example: "never"
+      responses:
+        '201':
+          description: "註冊成功並自動登入"
+        '400':
+          description: "缺少必要欄位"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: "使用者已存在"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Patient Management endpoints
+  /therapist/patients:
+    get:
+      summary: "獲取管理的病患列表"
+      description: "獲取當前登入的呼吸治療師所管理的所有病患的簡要列表，支援風險篩選和分頁"
+      tags: ["Patients"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: "頁碼"
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: "每頁數量"
+        - name: risk
+          in: query
+          schema:
+            type: string
+            enum: [high, medium, low]
+          description: "風險等級篩選"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: "限制返回數量（覆蓋per_page）"
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            default: "last_login"
+          description: "排序欄位"
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: "desc"
+          description: "排序順序"
+      responses:
+        '200':
+          description: "成功獲取病患列表"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Patient'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          description: "參數驗證失敗"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: "Token 無效或未提供"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "沒有治療師權限"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /patients/{patient_id}/profile:
+    get:
+      summary: "獲取病患詳細健康檔案"
+      description: "獲取指定病患的詳細健康檔案資訊"
+      tags: ["Patients"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+      responses:
+        '200':
+          description: "成功獲取病患檔案"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Patient'
+        '401':
+          description: "Token 無效或未提供"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "沒有權限查看此病患"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: "找不到該病患"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /patients/{patient_id}/kpis:
+    get:
+      summary: "獲取個別病患 KPI 指標"
+      description: "獲取指定病患的關鍵績效指標，包括最新問卷分數、依從性統計等"
+      tags: ["Patients"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+          description: "計算天數範圍（默認7天）"
+      responses:
+        '200':
+          description: "成功獲取病患 KPI"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    description: "KPI 資料"
+                  meta:
+                    type: object
+                    properties:
+                      patient_id:
+                        type: integer
+                      calculation_days:
+                        type: integer
+                      calculated_at:
+                        type: string
+                        format: date-time
+        '401':
+          description: "Token 無效或未提供"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "沒有權限查看此病患"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: "找不到該病患"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Questionnaire endpoints
+  /patients/{patient_id}/questionnaires/cat:
+    get:
+      summary: "獲取 CAT 問卷歷史記錄"
+      description: "獲取指定病患的所有歷史 CAT 問卷記錄，用於繪製分數趨勢圖"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: "頁碼"
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 12
+          description: "每頁數量"
+      responses:
+        '200':
+          description: "成功獲取 CAT 問卷歷史"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CATQuestionnaire'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          description: "Token 無效或未提供"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "沒有權限查看此病患的記錄"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: "找不到該病患"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: "提交 CAT 問卷"
+      description: "提交一份新的 CAT 問卷。如果當月已存在記錄，將回傳 409 Conflict"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [record_date, cough_score, phlegm_score, chest_score, breath_score, limit_score, confidence_score, sleep_score, energy_score]
+              properties:
+                record_date:
+                  type: string
+                  format: date
+                  description: "記錄日期 (YYYY-MM-DD)"
+                cough_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "咳嗽程度 (0-5)"
+                phlegm_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "痰液狀況 (0-5)"
+                chest_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "胸口緊繃 (0-5)"
+                breath_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "氣喘程度 (0-5)"
+                limit_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "日常活動限制 (0-5)"
+                confidence_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "信心外出 (0-5)"
+                sleep_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "睡眠品質 (0-5)"
+                energy_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "精力程度 (0-5)"
+      responses:
+        '201':
+          description: "CAT 問卷提交成功"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      record_id:
+                        type: integer
+                      total_score:
+                        type: integer
+                      message:
+                        type: string
+        '400':
+          description: "請求 Body 的資料格式或分數範圍錯誤"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: "Token 無效或未提供"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "試圖為其他病患提交問卷"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: "找不到具有指定 patient_id 的病患"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: "指定月份已存在問卷記錄"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /patients/{patient_id}/questionnaires/cat/{year}/{month}:
+    put:
+      summary: "更新指定月份的 CAT 問卷"
+      description: "更新指定年月份的 CAT 問卷"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "要更新的問卷年份 (e.g., 2025)"
+        - name: month
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          description: "要更新的問卷月份 (1-12)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [record_date, cough_score, phlegm_score, chest_score, breath_score, limit_score, confidence_score, sleep_score, energy_score]
+              properties:
+                record_date:
+                  type: string
+                  format: date
+                phlegm_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                chest_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                breath_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                limit_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                confidence_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                sleep_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                energy_score:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+      responses:
+        '200':
+          description: "CAT 問卷更新成功"
+        '400':
+          description: "請求 Body 的資料格式或日期格式錯誤"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: "Token 無效或未提供"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: "試圖為其他病患更新問卷"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: "找不到指定月份的問卷記錄"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # MMRC Questionnaire endpoints
+  /patients/{patient_id}/questionnaires/mmrc:
+    get:
+      summary: "獲取 MMRC 問卷歷史記錄"
+      description: "獲取指定病患的所有歷史 MMRC 問卷記錄"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: "頁碼"
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 12
+          description: "每頁數量"
+      responses:
+        '200':
+          description: "成功獲取 MMRC 問卷歷史"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MMRCQuestionnaire'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      summary: "提交 MMRC 問卷"
+      description: "提交一份新的 MMRC 問卷。如果當月已存在記錄，將回傳 409 Conflict"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [record_date, score, answer_text]
+              properties:
+                record_date:
+                  type: string
+                  format: date
+                  description: "記錄日期 (YYYY-MM-DD)"
+                score:
+                  type: integer
+                  minimum: 0
+                  maximum: 4
+                  description: "MMRC 分數 (0-4)"
+                answer_text:
+                  type: string
+                  description: "使用者選擇的對應文字描述"
+      responses:
+        '201':
+          description: "MMRC 問卷提交成功"
+
+  /patients/{patient_id}/questionnaires/mmrc/{year}/{month}:
+    put:
+      summary: "更新指定月份的 MMRC 問卷"
+      description: "更新指定年月份的 MMRC 問卷"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "要更新的問卷年份"
+        - name: month
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          description: "要更新的問卷月份 (1-12)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [record_date, score, answer_text]
+              properties:
+                record_date:
+                  type: string
+                  format: date
+                score:
+                  type: integer
+                  minimum: 0
+                  maximum: 4
+                answer_text:
+                  type: string
+      responses:
+        '200':
+          description: "MMRC 問卷更新成功"
+
+  # Daily Metrics endpoints
+  /patients/{patient_id}/daily_metrics:
+    get:
+      summary: "獲取每日健康日誌"
+      description: "獲取指定病患在特定日期範圍內的每日健康日誌記錄"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: "查詢起始日期，格式 YYYY-MM-DD"
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: "查詢結束日期，格式 YYYY-MM-DD"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: "頁碼"
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 30
+          description: "每頁數量"
+      responses:
+        '200':
+          description: "成功獲取日誌列表"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DailyMetric'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      summary: "新增每日健康日誌"
+      description: "供 LIFF 前端為指定病患新增一筆當日的健康日誌。如果當日已存在記錄，將會回傳 409 Conflict 錯誤"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                water_cc:
+                  type: integer
+                  description: "當日喝水量 (cc)"
+                medication:
+                  type: boolean
+                  description: "是否服藥"
+                exercise_min:
+                  type: integer
+                  description: "當日運動分鐘數"
+                cigarettes:
+                  type: integer
+                  description: "當日抽菸支數"
+      responses:
+        '201':
+          description: "日誌創建成功"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DailyMetric'
+
+  /patients/{patient_id}/daily_metrics/{log_date}:
+    put:
+      summary: "更新指定日期的健康日誌"
+      description: "供 LIFF 前端更新指定日期的健康日誌"
+      tags: ["Health Data & Questionnaires"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "病患的 user_id"
+        - name: log_date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          description: "要更新的日誌日期，格式 YYYY-MM-DD"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                water_cc:
+                  type: integer
+                  description: "更新後的喝水量 (cc)"
+                medication:
+                  type: boolean
+                  description: "更新後的服藥狀況"
+                exercise_min:
+                  type: integer
+                  description: "更新後的運動分鐘數"
+                cigarettes:
+                  type: integer
+                  description: "更新後的抽菸支數"
+      responses:
+        '200':
+          description: "日誌更新成功"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DailyMetric'
+
+  # User Management endpoints
+  /users:
+    post:
+      summary: "建立新使用者 (管理員專用)"
+      description: "供管理員建立新的使用者帳號（例如：呼吸治療師或其他管理員）"
+      tags: ["Users"]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account, password, is_staff, is_admin]
+              properties:
+                account:
+                  type: string
+                  example: "new_therapist_01"
+                password:
+                  type: string
+                  format: password
+                  example: "a_very_strong_password"
+                first_name:
+                  type: string
+                  example: "思敏"
+                last_name:
+                  type: string
+                  example: "王"
+                email:
+                  type: string
+                  example: "sumin.wang@example.com"
+                is_staff:
+                  type: boolean
+                  example: true
+                is_admin:
+                  type: boolean
+                  example: false
+                title:
+                  type: string
+                  example: "呼吸治療師"
+      responses:
+        '201':
+          description: "使用者建立成功"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+
+tags:
+  - name: Authentication
+    description: "身份驗證相關 API"
+  - name: Patients
+    description: "病患管理相關 API"
+  - name: Health Data & Questionnaires
+    description: "健康數據與問卷相關 API"
+  - name: Users
+    description: "使用者管理相關 API"

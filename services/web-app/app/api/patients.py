@@ -2,10 +2,11 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from ..core import patient_service
+from ..core.patient_service import PatientService
 from ..core.user_repository import UserRepository
 
 patients_bp = Blueprint('patients', __name__, url_prefix='/api/v1')
+patient_service = PatientService()
 
 @patients_bp.route('/therapist/patients', methods=['GET'])
 @jwt_required()
@@ -19,7 +20,7 @@ patients_bp = Blueprint('patients', __name__, url_prefix='/api/v1')
         {'name': 'per_page', 'in': 'query', 'type': 'integer', 'default': 20, 'description': '每頁數量'},
         {'name': 'risk', 'in': 'query', 'type': 'string', 'description': '風險等級篩選 (high, medium, low)', 'required': False},
         {'name': 'limit', 'in': 'query', 'type': 'integer', 'description': '限制返回數量（覆蓋per_page）'},
-        {'name': 'sort_by', 'in': 'query', 'type': 'string', 'default': 'created_at', 'description': '排序欄位'},
+        {'name': 'sort_by', 'in': 'query', 'type': 'string', 'default': 'last_login', 'description': '排序欄位'},
         {'name': 'order', 'in': 'query', 'type': 'string', 'default': 'desc', 'enum': ['asc', 'desc'], 'description': '排序順序'}
     ],
     'responses': {
@@ -38,108 +39,16 @@ def get_therapist_patients():
     if not current_user or not current_user.is_staff:
         return jsonify({"error": {"code": "PERMISSION_DENIED", "message": "Staff access required"}}), 403
 
-    # 1. 參數獲取
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    risk = request.args.get('risk', type=str)
-    limit = request.args.get('limit', type=int)
-    sort_by = request.args.get('sort_by', 'created_at', type=str)
-    order = request.args.get('order', 'desc', type=str)
+    # 從請求中獲取所有查詢參數
+    query_params = request.args.to_dict()
 
-    # 2. 參數驗證
-    validation_errors = []
-    
-    # 處理 risk 參數：過濾掉 undefined、null、空字串等無效值
-    if risk and str(risk).strip() and str(risk).lower() not in ['undefined', 'null', 'none', '']:
-        risk_lower = str(risk).lower()
-        if risk_lower not in ['high', 'medium', 'low']:
-            validation_errors.append("Invalid risk level. Must be 'high', 'medium', or 'low'")
-        else:
-            risk = risk_lower  # 標準化為小寫
-    else:
-        risk = None  # 將無效值設為 None
-    
-    # 處理 limit 參數：過濾掉無效值
-    if limit is not None and limit > 0 and limit <= 100:
-        pass  # limit 有效
-    elif limit is not None:  # 如果提供了 limit 但值無效
-        validation_errors.append("Invalid limit. Must be between 1 and 100")
-        limit = None  # 將無效值設為 None
-    
-    # 處理 page 和 per_page 參數
-    if page <= 0:
-        validation_errors.append("Page must be greater than 0")
-    
-    if per_page <= 0 or per_page > 100:
-        validation_errors.append("Per page must be between 1 and 100")
-    
-    if validation_errors:
-        return jsonify({
-            "error": {
-                "code": "VALIDATION_ERROR",
-                "message": "; ".join(validation_errors),
-                "details": validation_errors
-            }
-        }), 400
+    # 調用服務層
+    response_data, status_code = patient_service.get_patients_by_therapist(
+        therapist_id=current_user.id,
+        **query_params
+    )
 
-    # 3. 調用服務層
-    try:
-        paginated_data = patient_service.get_patients_by_therapist(
-            therapist_id=current_user.id,
-            page=page,
-            per_page=per_page,
-            risk=risk,
-            limit=limit,
-            sort_by=sort_by,
-            order=order
-        )
-    except Exception as e:
-        return jsonify({
-            "error": {
-                "code": "INTERNAL_ERROR",
-                "message": "Failed to retrieve patients data"
-            }
-        }), 500
-
-    # 4. 格式化回傳的資料
-    patient_list = []
-    for user, health_profile in paginated_data.items:
-        # 計算風險等級用於顯示
-        risk_level = patient_service.calculate_patient_risk(user.id)
-        
-        patient_info = {
-            "user_id": user.id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "gender": user.gender,
-            "last_login": user.last_login.isoformat() if user.last_login else None,
-            "risk_level": risk_level,
-            # TODO: 待問卷模型完成後，補上 last_cat_score 和 last_mmrc_score
-            "last_cat_score": None,
-            "last_mmrc_score": None
-        }
-        patient_list.append(patient_info)
-
-    # 5. 返回結果
-    response_data = {
-        "data": patient_list,
-        "pagination": {
-            "total_items": paginated_data.total,
-            "total_pages": paginated_data.pages,
-            "current_page": paginated_data.page,
-            "per_page": paginated_data.per_page,
-            "has_next": hasattr(paginated_data, 'has_next') and paginated_data.has_next,
-            "has_prev": hasattr(paginated_data, 'has_prev') and paginated_data.has_prev
-        },
-        "filters": {
-            "risk": risk,
-            "limit": limit,
-            "sort_by": sort_by,
-            "order": order
-        }
-    }
-
-    return jsonify(response_data), 200
+    return jsonify(response_data), status_code
 
 @patients_bp.route('/patients/<int:patient_id>/profile', methods=['GET'])
 @jwt_required()

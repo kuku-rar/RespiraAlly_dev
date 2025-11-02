@@ -1,0 +1,1 @@
+# AI Worker mappers for converting between domain objects and external formats

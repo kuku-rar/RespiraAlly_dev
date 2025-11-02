@@ -3,69 +3,164 @@ from .patient_repository import PatientRepository
 from sqlalchemy import text
 from ..extensions import db
 
-def get_patients_by_therapist(therapist_id, page=1, per_page=20, sort_by='created_at', order='desc', risk=None, limit=None):
-    """
-    獲取治療師管理的病患列表，支援風險篩選和分頁。
-    
-    Args:
-        therapist_id: 治療師ID
-        page: 頁碼
-        per_page: 每頁數量
-        sort_by: 排序欄位
-        order: 排序順序
-        risk: 風險等級篩選 ('high', 'medium', 'low')
-        limit: 限制返回數量
-    """
-    repo = PatientRepository()
-    
-    # 如果指定了limit，覆蓋per_page
-    if limit:
-        per_page = limit
-    
-    # 獲取基礎病患列表
-    paginated_patients = repo.find_all_by_therapist_id(
-        therapist_id=therapist_id,
-        page=page,
-        per_page=per_page,
-        sort_by=sort_by,
-        order=order
-    )
-    
-    # 如果沒有風險篩選，直接返回
-    if not risk:
-        return paginated_patients
-    
-    # 應用風險篩選
-    filtered_patients = []
-    try:
-        for user, health_profile in paginated_patients.items:
-            try:
-                # 計算風險等級
+class PatientService:
+    def __init__(self):
+        self.patient_repository = PatientRepository()
+
+    def get_patients_by_therapist(self, therapist_id, page=1, per_page=None, limit=None, risk=None, sort_by='last_login', order='desc'):
+        """
+        獲取並格式化治療師管理的病患列表，包含參數驗證、篩選和分頁。
+        - 新增參數驗證
+        - 新增風險等級篩選
+        - 新增最終資料格式化
+        """
+        # 1. 參數驗證與處理
+        error_response = self._validate_and_prepare_params(page, per_page, limit, risk, sort_by, order)
+        if error_response:
+            return error_response
+
+        page, per_page, limit, risk, sort_by, order = self._get_processed_params(page, per_page, limit, risk, sort_by, order)
+        effective_per_page = limit if limit is not None else per_page
+
+        # 2. 資料庫查詢
+        try:
+            paginated_data = self.patient_repository.find_all_by_therapist_id(
+                therapist_id=therapist_id,
+                page=page,
+                per_page=effective_per_page,
+                sort_by=sort_by,
+                order=order
+            )
+        except Exception as e:
+            # 在實際應用中，這裡應該記錄錯誤日誌
+            print(f"Error fetching patients from repository: {e}")
+            return {"error": {"code": "DB_ERROR", "message": "Database query failed"}}, 500
+
+        # 3. 風險篩選與資料格式化
+        patient_list = []
+        all_items = paginated_data.items
+
+        if risk:
+            filtered_items = []
+            for user, health_profile in all_items:
                 risk_level = calculate_patient_risk(user.id)
-                
-                # 根據風險等級篩選
-                if risk == 'high' and risk_level == 'high':
-                    filtered_patients.append((user, health_profile))
-                elif risk == 'medium' and risk_level == 'medium':
-                    filtered_patients.append((user, health_profile))
-                elif risk == 'low' and risk_level == 'low':
-                    filtered_patients.append((user, health_profile))
-            except Exception as e:
-                print(f"處理用戶 {user.id} 風險篩選時發生錯誤: {e}")
-                # 如果單個用戶處理失敗，仍然繼續處理其他用戶
-                continue
+                if risk_level == risk:
+                    filtered_items.append((user, health_profile, risk_level))
+            items_to_format = filtered_items
+        else:
+            items_to_format = [(user, hp, calculate_patient_risk(user.id)) for user, hp in all_items]
+
+        for user, health_profile, calculated_risk in items_to_format:
+            patient_info = {
+                "user_id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "gender": user.gender,
+                "last_login": user.last_login.isoformat() if user.last_login else None,
+                "risk_level": calculated_risk,
+                # TODO: 待問卷模型完成後，補上 last_cat_score 和 last_mmrc_score
+                "last_cat_score": None,
+                "last_mmrc_score": None
+            }
+            patient_list.append(patient_info)
+
+        # 4. 準備回傳結果
+        total_items = len(patient_list) if risk else paginated_data.total
+        total_pages = (total_items + effective_per_page - 1) // effective_per_page if effective_per_page > 0 else 0
+
+        response_data = {
+            "data": patient_list,
+            "pagination": {
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "current_page": page,
+                "per_page": effective_per_page,
+            },
+            "filters": {
+                "risk": risk,
+                "limit": limit,
+                "sort_by": sort_by,
+                "order": order
+            }
+        }
         
-        # 更新分頁資訊
-        paginated_patients.items = filtered_patients
-        paginated_patients.total = len(filtered_patients)
-        paginated_patients.pages = (len(filtered_patients) + per_page - 1) // per_page
-        
-    except Exception as e:
-        print(f"風險篩選過程中發生錯誤: {e}")
-        # 如果風險篩選失敗，返回原始結果
+        if not risk:
+            response_data["pagination"]["has_next"] = paginated_data.has_next
+            response_data["pagination"]["has_prev"] = paginated_data.has_prev
+        else:
+            response_data["pagination"]["has_next"] = (page * effective_per_page) < total_items
+            response_data["pagination"]["has_prev"] = page > 1
+
+        return response_data, 200
+
+    def _validate_and_prepare_params(self, page, per_page, limit, risk, sort_by, order):
+        errors = []
+        # 驗證 page
+        try:
+            page = int(page)
+            if page < 1:
+                errors.append("Page must be a positive integer.")
+        except (ValueError, TypeError):
+            errors.append("Page must be an integer.")
+
+        # 驗證 per_page
+        if per_page is not None:
+            try:
+                per_page = int(per_page)
+                if per_page < 1:
+                    errors.append("Per page must be a positive integer.")
+            except (ValueError, TypeError):
+                errors.append("Per page must be an integer.")
+
+        # 驗證 limit
+        if limit is not None:
+            try:
+                limit = int(limit)
+                if limit < 1:
+                    errors.append("Limit must be a positive integer.")
+            except (ValueError, TypeError):
+                errors.append("Limit must be an integer.")
+
+        # 驗證 risk
+        if risk and risk.lower() not in ['high', 'medium', 'low']:
+            errors.append("Invalid risk level. Must be 'high', 'medium', or 'low'.")
+
+        # 驗證 sort_by
+        allowed_sort_fields = ['created_at', 'last_login', 'first_name', 'last_name']
+        if sort_by not in allowed_sort_fields:
+            errors.append(f"Invalid sort_by field. Allowed fields are: {', '.join(allowed_sort_fields)}")
+
+        # 驗證 order
+        if order.lower() not in ['asc', 'desc']:
+            errors.append("Invalid order value. Must be 'asc' or 'desc'.")
+
+        if errors:
+            return {"error": {"code": "VALIDATION_ERROR", "message": "Invalid query parameters", "details": errors}}, 400
+        return None
+
+    def _get_processed_params(self, page, per_page, limit, risk, sort_by, order):
+        page = int(page) if page else 1
+        per_page = int(per_page) if per_page else 20
+        limit = int(limit) if limit else None
+        risk = risk.lower() if risk else None
+        sort_by = sort_by if sort_by else 'last_login'
+        order = order.lower() if order else 'desc'
+        return page, per_page, limit, risk, sort_by, order
+
+    def get_patient_profile(self, patient_id):
+        """
+        獲取單一病患的詳細檔案。
+        """
+        return self.patient_repository.find_profile_by_user_id(patient_id)
+
+    def calculate_patient_kpis(self, patient_id, days=7):
+        """
+        計算個別病患的 KPI 指標
+        """
+        # ... (此處省略了 calculate_patient_kpis 的實現細節)
         pass
-    
-    return paginated_patients
+
+
 
 def calculate_patient_risk(user_id):
     """
