@@ -109,6 +109,8 @@ export default defineConfig(({ command, mode }) => {
       host: "0.0.0.0", // 允許外部網路存取
       open: true, // 啟動時自動在瀏覽器中打開
       cors: true, // 啟用 CORS
+      // 允許 ngrok 等外部 host 訪問（開發環境用）
+      allowedHosts: "all",
       // 為了在 Docker 環境中穩定觸發 HMR，啟用輪詢
       watch: {
         usePolling: true,
