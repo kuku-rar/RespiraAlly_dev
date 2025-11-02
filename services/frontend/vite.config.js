@@ -106,11 +106,16 @@ export default defineConfig(({ command, mode }) => {
     // --- 6. 開發伺服器 (Server) ---
     server: {
       port: parseInt(env.VITE_PORT, 10) || 3000,
-      host: "0.0.0.0", // 允許外部網路存取
+      host: "0.0.0.0", // 綁定所有網路介面
+      strictPort: false,
       open: true, // 啟動時自動在瀏覽器中打開
       cors: true, // 啟用 CORS
-      // 允許 ngrok 等外部 host 訪問（開發環境用）
-      allowedHosts: "all",
+      // 允許所有主機訪問（ngrok, 反向代理等）
+      allowedHosts: [
+        '.ngrok-free.app',
+        '.ngrok.io',
+        'localhost',
+      ],
       // 為了在 Docker 環境中穩定觸發 HMR，啟用輪詢
       watch: {
         usePolling: true,

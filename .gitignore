@@ -65,8 +65,9 @@ services/web-app/Dockerfile.optimized
 infra/nginx/optimized.conf
 infra/nginx/Dockerfile.optimized
 VibeCoding_Workflow_Templates/
-.mcp.json
 
+# Playwright MCP 測試截圖目錄
+.playwright-mcp/
 
 # Claude Code Universal Template .gitignore
 
