@@ -1,0 +1,492 @@
+{
+  "project_id": "respirally_v1_refactoring",
+  "project_name": "RespiraAlly V1 - COPD Healthcare Platform (Refactoring Phase)",
+  "version": "v1.0-refactor",
+  "status": "refactoring",
+  "created_at": "2025-11-03T04:26:00Z",
+  "last_updated": "2025-11-03T04:26:00Z",
+
+  "metadata": {
+    "description": "台語語音互動的 COPD 慢性病健康管理平台 - 基於 Linus 實用主義原則進行重構",
+    "project_phase": "Phase 2 Development + Refactoring",
+    "domain": "Healthcare/AI/Chronic Disease Management",
+    "tech_stack": {
+      "backend": ["Python 3.11+", "Flask", "SQLAlchemy", "Flask-JWT-Extended", "Celery"],
+      "frontend": ["React", "Vite", "Ant Design", "LINE LIFF"],
+      "database": ["PostgreSQL", "Redis", "MinIO", "Milvus"],
+      "messaging": ["RabbitMQ"],
+      "ai_ml": ["OpenAI API", "STT Services", "TTS Services", "LangChain", "RAG"],
+      "deployment": ["Docker", "Docker Compose", "Nginx"],
+      "monitoring": []
+    },
+    "architecture_patterns": ["Microservices", "Domain-Driven Design (Pragmatic)", "Event-Driven (Message Queue)"],
+    "refactoring_philosophy": "Linus Torvalds Pragmatic Approach - 拒絕過度設計",
+    "documentation": {
+      "prd": "docs/02_project_brief_and_prd.md",
+      "architecture": "docs/05_architecture_and_design_document.md",
+      "system_architecture": "docs/system_architecture.md",
+      "api_spec": "docs/06_api_design_specification.md",
+      "refactoring_plan": "docs/refactoring_plan.md",
+      "linus_principles": "docs/linus-refactor-principle.md",
+      "wbs_plan": "docs/16_wbs_development_plan.md"
+    }
+  },
+
+  "project_status": {
+    "phase_1_mvp": {
+      "name": "核心 MVP (Text-First)",
+      "status": "completed",
+      "completion_date": "2025-09-XX",
+      "features": [
+        "✅ 病患 LIFF - 健康日誌、問卷、純文字 AI 對話",
+        "✅ 治療師儀表板 - 病患列表、數據圖表、整合式聊天室",
+        "✅ 後端 API - 核心業務邏輯、資料庫、Redis 快取",
+        "✅ AI Worker - 文字版 LLM+RAG"
+      ]
+    },
+    "phase_2_mvp": {
+      "name": "完整 MVP (Voice-Enabled)",
+      "status": "in_progress",
+      "target_completion": "2025-12-XX",
+      "features": [
+        "🔄 病患 LIFF - 語音輸入 (STT 整合)",
+        "🔄 AI Worker - 完整 STT->LLM->TTS 流程",
+        "🔄 病患 LIFF - 語音回覆播放"
+      ]
+    },
+    "refactoring_phase": {
+      "name": "技術債務清理 (Refactoring)",
+      "status": "planned",
+      "priority": "high",
+      "reason": "程式碼腐爛徵兆：邏輯分散、測試困難、複雜度增加",
+      "core_goals": [
+        "🎯 核心目標 1: 前後端到資料庫資訊流暢通",
+        "🎯 核心目標 2: 達成 100% 測試覆蓋率"
+      ],
+      "objectives": [
+        "建立完整的資訊流整合測試（Frontend → API → Database → AI-Worker）",
+        "達成 100% 測試覆蓋率（單元測試 + 整合測試 + API 契約測試 + E2E 測試）",
+        "嚴格遵循 TDD 紅-綠-重構循環",
+        "建立 API 契約測試安全網（Never Break APIs）",
+        "分離領域模型與 SQLAlchemy 持久化層",
+        "集中化業務邏輯到領域物件",
+        "統一 AI Pipeline 設計並測試完整流程"
+      ]
+    }
+  },
+
+  "timeline": {
+    "phase_1_completed": "2025-09-XX",
+    "phase_2_started": "2025-10-XX",
+    "refactoring_started": "2025-11-03",
+    "target_phase_2_complete": "2025-12-XX",
+    "target_refactoring_complete": "2025-11-XX"
+  },
+
+  "refactoring_principles": {
+    "philosophy": "Linus Torvalds Pragmatic Approach",
+    "core_rules": [
+      "資料結構優先 (Data Structures First) - 分離領域模型與 ORM",
+      "絕不破壞 API (Never Break APIs) - API 契約測試是鐵律",
+      "邏輯集中管理 (Logic in One Place) - 業務邏輯只存在一個地方",
+      "有意義的測試 (Write Tests That Matter) - 單元測試 + API 契約測試",
+      "TDD 紅-綠-重構 (Red-Green-Refactor) - 必須先看到測試失敗"
+    ],
+    "anti_patterns_rejected": [
+      "❌ 教科書式洋蔥架構 (Onion Architecture)",
+      "❌ 完整 DDD 實現 (Full DDD)",
+      "❌ Gherkin BDD 檔案（無 PM 維護承諾）",
+      "❌ 過度抽象與過早優化"
+    ],
+    "what_we_take": [
+      "✅ DDD 精華：關注點分離、領域模型隔離",
+      "✅ 簡單實用的分層：領域層、服務層、倉儲層",
+      "✅ 測試驅動開發的核心循環"
+    ]
+  },
+
+  "refactoring_plan": {
+    "phase_0": {
+      "name": "建立安全網 (Safety Net)",
+      "priority": "P0",
+      "blocking": true,
+      "description": "此步驟完成前，不允許任何重構",
+      "tasks": [
+        {
+          "id": "0.1",
+          "title": "編寫 OpenAPI 契約規格 (所有現有 API)",
+          "status": "pending",
+          "estimated_hours": 16,
+          "owner": "Backend + API Spec Writer"
+        },
+        {
+          "id": "0.2",
+          "title": "建立 API 契約測試套件 (pytest + HTTP)",
+          "status": "pending",
+          "estimated_hours": 24,
+          "owner": "QA + Backend",
+          "acceptance": "100% API 覆蓋率"
+        },
+        {
+          "id": "0.3",
+          "title": "整合 API 測試到 CI/CD",
+          "status": "pending",
+          "estimated_hours": 4,
+          "owner": "DevOps"
+        },
+        {
+          "id": "0.4",
+          "title": "驗證安全網完整性",
+          "status": "pending",
+          "estimated_hours": 4,
+          "owner": "Tech Lead",
+          "acceptance": "所有 API 測試通過"
+        }
+      ],
+      "total_hours": 48,
+      "exit_criteria": "API 契約測試覆蓋率 = 100%，所有測試通過"
+    },
+    "phase_1": {
+      "name": "清理 Web-App 核心",
+      "priority": "P0",
+      "dependencies": ["phase_0"],
+      "tasks": [
+        {
+          "id": "1.1",
+          "title": "建立純領域物件 (Patient, DailyMetric, Questionnaire)",
+          "status": "pending",
+          "estimated_hours": 16,
+          "owner": "Backend",
+          "description": "在 app/core/domain/ 建立不依賴 SQLAlchemy 的純 Python 類別"
+        },
+        {
+          "id": "1.2",
+          "title": "建立 Repository 層 (ORM ↔ 領域物件轉換)",
+          "status": "pending",
+          "estimated_hours": 20,
+          "owner": "Backend",
+          "description": "建立 PatientRepository, DailyMetricRepository 等"
+        },
+        {
+          "id": "1.3",
+          "title": "重構 patient_service (使用新領域物件)",
+          "status": "pending",
+          "estimated_hours": 16,
+          "owner": "Backend"
+        },
+        {
+          "id": "1.4",
+          "title": "將業務邏輯內聚到領域物件 (如 calculate_risk)",
+          "status": "pending",
+          "estimated_hours": 12,
+          "owner": "Backend",
+          "description": "patient.calculate_risk() 而非 service 中的函式"
+        },
+        {
+          "id": "1.5",
+          "title": "為所有業務邏輯編寫單元測試 (TDD)",
+          "status": "pending",
+          "estimated_hours": 24,
+          "owner": "Backend + QA",
+          "acceptance": "單元測試覆蓋率 > 80%"
+        },
+        {
+          "id": "1.6",
+          "title": "驗證 API 契約測試全部通過",
+          "status": "pending",
+          "estimated_hours": 4,
+          "owner": "Tech Lead",
+          "acceptance": "零 API 破壞"
+        }
+      ],
+      "total_hours": 92,
+      "exit_criteria": "領域模型與 ORM 分離，業務邏輯內聚，API 零破壞，測試覆蓋率 > 80%"
+    },
+    "phase_2": {
+      "name": "清理 AI-Worker",
+      "priority": "P1",
+      "dependencies": ["phase_1"],
+      "tasks": [
+        {
+          "id": "2.1",
+          "title": "統一 AI Task Pipeline 設計 (消除 Text/Voice 分支)",
+          "status": "pending",
+          "estimated_hours": 12,
+          "owner": "AI/ML",
+          "description": "用策略模式統一 [STT] -> [LLM+RAG] -> [TTS]"
+        },
+        {
+          "id": "2.2",
+          "title": "重構 LLM+RAG 邏輯",
+          "status": "pending",
+          "estimated_hours": 16,
+          "owner": "AI/ML"
+        },
+        {
+          "id": "2.3",
+          "title": "重構 STT/TTS 整合",
+          "status": "pending",
+          "estimated_hours": 12,
+          "owner": "AI/ML"
+        },
+        {
+          "id": "2.4",
+          "title": "為 AI Worker 編寫單元測試",
+          "status": "pending",
+          "estimated_hours": 16,
+          "owner": "AI/ML + QA"
+        }
+      ],
+      "total_hours": 56,
+      "exit_criteria": "AI Pipeline 統一，無特殊情況分支，測試覆蓋充分"
+    },
+    "phase_3": {
+      "name": "持續改進",
+      "priority": "P2",
+      "dependencies": ["phase_2"],
+      "tasks": [
+        {
+          "id": "3.1",
+          "title": "程式碼品質檢查 (code-quality-specialist)",
+          "status": "pending",
+          "estimated_hours": 8,
+          "owner": "Code Quality Agent"
+        },
+        {
+          "id": "3.2",
+          "title": "安全性稽核 (security-infrastructure-auditor)",
+          "status": "pending",
+          "estimated_hours": 8,
+          "owner": "Security Agent"
+        },
+        {
+          "id": "3.3",
+          "title": "效能優化 (如需要)",
+          "status": "pending",
+          "estimated_hours": 16,
+          "owner": "Backend + AI/ML"
+        },
+        {
+          "id": "3.4",
+          "title": "文檔更新 (documentation-specialist)",
+          "status": "pending",
+          "estimated_hours": 8,
+          "owner": "Documentation Agent"
+        }
+      ],
+      "total_hours": 40,
+      "exit_criteria": "品質指標達標，安全無漏洞，文檔完整"
+    }
+  },
+
+  "total_refactoring_effort": {
+    "total_hours": 236,
+    "completed_hours": 0,
+    "progress_percentage": 0,
+    "current_phase": "phase_0",
+    "current_task": "準備開始"
+  },
+
+  "taskmaster_config": {
+    "suggestion_mode": "MEDIUM",
+    "hub_coordination": "enabled",
+    "parallel_execution": false,
+    "coordination_strategy": "sequential_with_safety_checks",
+    "human_confirmation_required": [
+      "API contract changes",
+      "Database schema migrations",
+      "Architecture refactoring decisions",
+      "Breaking changes (任何可能破壞 API 的改動)"
+    ]
+  },
+
+  "available_subagents": {
+    "code-quality-specialist": {
+      "emoji": "🟡",
+      "trigger_phase": "phase_3",
+      "responsibilities": ["Code review", "Refactoring suggestions", "Technical debt analysis"]
+    },
+    "test-automation-engineer": {
+      "emoji": "🟢",
+      "trigger_phase": "phase_0, phase_1, phase_2",
+      "responsibilities": ["Unit tests", "API contract tests", "Test coverage"]
+    },
+    "security-infrastructure-auditor": {
+      "emoji": "🔴",
+      "trigger_phase": "phase_3",
+      "responsibilities": ["Security audits", "Vulnerability scanning"]
+    },
+    "documentation-specialist": {
+      "emoji": "📝",
+      "trigger_phase": "phase_3",
+      "responsibilities": ["API documentation", "Architecture docs update"]
+    }
+  },
+
+  "success_metrics": {
+    "core_goals": {
+      "data_flow_integration": {
+        "target": "100%",
+        "current": "未測量",
+        "description": "前後端到資料庫資訊流完全暢通，無斷點",
+        "validation": [
+          "Frontend → API 資料流測試",
+          "API → Database 資料流測試",
+          "Database → API → Frontend 完整循環測試",
+          "LIFF → API → RabbitMQ → AI-Worker → Response 完整流程測試",
+          "錯誤處理在每一層都正確執行"
+        ]
+      },
+      "test_coverage_total": {
+        "target": "100%",
+        "current": "未知",
+        "description": "全專案測試覆蓋率達 100%（不是 80%）",
+        "breakdown": {
+          "unit_tests": "100% 業務邏輯覆蓋",
+          "integration_tests": "100% 服務整合覆蓋",
+          "api_contract_tests": "100% API 端點覆蓋",
+          "e2e_tests": "100% 關鍵使用者流程覆蓋"
+        }
+      }
+    },
+    "refactoring_goals": {
+      "api_contract_coverage": {
+        "target": "100%",
+        "current": "0%",
+        "description": "所有現有 API 都有契約測試"
+      },
+      "unit_test_coverage": {
+        "target": "100%",
+        "current": "未知",
+        "description": "所有業務邏輯的單元測試覆蓋率（不是 80%）"
+      },
+      "integration_test_coverage": {
+        "target": "100%",
+        "current": "0%",
+        "description": "所有服務層與資料庫層的整合測試"
+      },
+      "e2e_test_coverage": {
+        "target": "100%",
+        "current": "0%",
+        "description": "所有關鍵使用者流程的端到端測試"
+      },
+      "domain_model_separation": {
+        "target": "100%",
+        "current": "0%",
+        "description": "領域模型與 ORM 完全分離"
+      },
+      "code_complexity_reduction": {
+        "target": "減少 30%",
+        "current": "基準未測量",
+        "description": "減少條件分支、提取方法、降低圈複雜度"
+      }
+    },
+    "business_metrics": {
+      "api_response_time": {
+        "target": "<500ms",
+        "current": "未知"
+      },
+      "daily_health_report_completion": {
+        "target": ">70%",
+        "current": "未知"
+      },
+      "ai_interaction_frequency": {
+        "target": ">3次/週",
+        "current": "未知"
+      }
+    }
+  },
+
+  "risks": [
+    {
+      "id": "RISK-R001",
+      "description": "重構過程中意外破壞 API 導致前端/LIFF 故障",
+      "impact": "Critical",
+      "probability": "Medium",
+      "mitigation": "Phase 0 的 API 契約測試是強制性安全網",
+      "owner": "Tech Lead"
+    },
+    {
+      "id": "RISK-R002",
+      "description": "重構時間過長，延誤 Phase 2 語音功能開發",
+      "impact": "High",
+      "probability": "Medium",
+      "mitigation": "採用漸進式重構，Phase 1 與 Phase 2 可並行",
+      "owner": "PM"
+    },
+    {
+      "id": "RISK-R003",
+      "description": "測試覆蓋率不足，隱藏 Bug 未被發現",
+      "impact": "High",
+      "probability": "Low",
+      "mitigation": "TDD 紀律 + 程式碼審查",
+      "owner": "QA Lead"
+    }
+  ],
+
+  "team": {
+    "roles": [
+      {
+        "role": "Tech Lead",
+        "owner": "Backend Lead",
+        "responsibilities": ["重構計劃執行", "技術決策", "程式碼審查"]
+      },
+      {
+        "role": "Backend Developer",
+        "owner": "Backend Team",
+        "responsibilities": ["領域模型重構", "Repository 實現", "單元測試"]
+      },
+      {
+        "role": "AI/ML Engineer",
+        "owner": "AI Specialist",
+        "responsibilities": ["AI Worker 重構", "Pipeline 統一"]
+      },
+      {
+        "role": "QA Engineer",
+        "owner": "QA Team",
+        "responsibilities": ["API 契約測試", "測試策略", "覆蓋率監控"]
+      },
+      {
+        "role": "Frontend Developer",
+        "owner": "Frontend Team",
+        "responsibilities": ["確保 API 變更通知", "整合測試"]
+      }
+    ]
+  },
+
+  "reporting": {
+    "daily_standup": {
+      "enabled": true,
+      "duration_minutes": 15,
+      "focus": "重構進度與阻礙"
+    },
+    "weekly_refactoring_report": {
+      "enabled": true,
+      "metrics": [
+        "API 契約測試覆蓋率",
+        "單元測試覆蓋率",
+        "已重構模組數",
+        "程式碼品質指標"
+      ]
+    }
+  },
+
+  "next_actions": [
+    {
+      "action": "啟動 Phase 0 - 建立 API 契約規格",
+      "priority": "P0",
+      "description": "使用 OpenAPI/Swagger 為所有現有 API 端點編寫規格",
+      "owner": "Backend + API Spec Writer",
+      "estimated_hours": 16,
+      "blocking": "所有重構工作"
+    },
+    {
+      "action": "建立 API 契約測試套件",
+      "priority": "P0",
+      "description": "使用 pytest 直接透過 HTTP 呼叫 API 端點驗證",
+      "owner": "QA + Backend",
+      "estimated_hours": 24,
+      "dependencies": ["啟動 Phase 0"]
+    }
+  ]
+}
