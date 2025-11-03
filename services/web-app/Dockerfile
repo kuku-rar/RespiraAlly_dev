@@ -18,9 +18,13 @@ COPY . .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 設定 entrypoint.sh 執行權限
+RUN chmod +x /usr/src/app/entrypoint.sh
+
 EXPOSE 5000
 
-ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
+# 明確指定使用 shell 執行 entrypoint
+ENTRYPOINT ["/bin/sh", "/usr/src/app/entrypoint.sh"]
 
 # CMD 提供容器的預設啟動命令。
 # 這個命令會被 docker-compose.yml 中的 'command' 指令覆蓋。
