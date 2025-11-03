@@ -79,7 +79,7 @@ export default defineConfig(({ command, mode }) => {
         // 針對不同應用程式設定別名
         "@apps": resolve(__dirname, "./src/apps"),
         "@dashboard": resolve(__dirname, "./src/apps/dashboard"),
-        "@liff": resolve(__dirname, "./src/apps/liff"),
+        "@liff-app": resolve(__dirname, "./src/apps/liff"),
 
         // --- 通用資源 (Common Resources) ---
         // 方便存取常用資源目錄
@@ -227,7 +227,8 @@ export default defineConfig(({ command, mode }) => {
         "clsx",
       ],
       exclude: [
-        // 可在此排除不需要預構建的依賴
+        // 排除 @line/liff，因為其內部模組結構需要特殊處理
+        "@line/liff",
       ],
     },
 
