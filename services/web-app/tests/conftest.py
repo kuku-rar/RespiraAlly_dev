@@ -2,7 +2,15 @@
 Test configuration and shared fixtures
 """
 
+"""
+PyTest Configuration for API Contract Tests
+
+This file sets up the test environment and provides reusable fixtures for all contract tests.
+Ensures proper database setup, cleanup, and authentication for testing.
+"""
+
 import pytest
+import os
 import os
 import tempfile
 from app.app import create_app
