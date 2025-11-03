@@ -24,6 +24,7 @@ import {
   FireOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import liff from "@line/liff";
 
 import { useAccessibility } from "../../../shared/contexts/AccessibilityContext";
 import bgImageUrl from "@assets/毛玻璃_BG2.png";
@@ -45,9 +46,6 @@ const RegisterPage = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // 動態導入 LIFF SDK
-      const liff = (await import("@line/liff")).default;
-
       // 確保 LIFF 已初始化
       if (!liff.isLoggedIn()) {
         message.error("請先登入 LINE");

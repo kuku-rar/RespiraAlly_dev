@@ -225,11 +225,14 @@ export default defineConfig(({ command, mode }) => {
         "recharts",
         "dayjs",
         "clsx",
-      ],
-      exclude: [
-        // 排除 @line/liff，因為其內部模組結構需要特殊處理
+        // 強制預構建 @line/liff 及其依賴
         "@line/liff",
       ],
+      exclude: [],
+      esbuildOptions: {
+        // 處理 CommonJS 模組的 default export
+        mainFields: ['module', 'main'],
+      },
     },
 
     // --- 9. CSS 設定 ---
