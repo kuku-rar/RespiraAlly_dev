@@ -44,11 +44,11 @@ GUEST_MENU = {
     "size": {"width": 2500, "height": 843},
     "selected": True,
     "name": "Guest Menu",
-    "chatBarText": "點我開始",
+    "chatBarText": "點我註冊",
     "areas": [
         {
             "bounds": {"x": 0, "y": 0, "width": 2500, "height": 843},
-            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}"}
+            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}/register"}
         }
     ]
 }
@@ -62,15 +62,15 @@ MEMBER_MENU = {
     "areas": [
         {
             "bounds": {"x": 0, "y": 0, "width": 833, "height": 843},
-            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}?page=daily_log"}
+            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}/voice-chat"}
         },
         {
             "bounds": {"x": 833, "y": 0, "width": 834, "height": 843},
-            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}?page=cat_form"}
+            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}/daily-metrics"}
         },
         {
             "bounds": {"x": 1667, "y": 0, "width": 833, "height": 843},
-            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}?page=mmrc_form"}
+            "action": {"type": "uri", "uri": f"https://liff.line.me/{LIFF_CHANNEL_ID}/questionnaire/cat"}
         }
     ]
 }
