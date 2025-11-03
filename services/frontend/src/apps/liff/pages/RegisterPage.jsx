@@ -61,15 +61,11 @@ const RegisterPage = () => {
         last_name: values.name?.split(" ")[1] || "",
         gender: values.gender,
         phone: values.phone,
+        // 健康資訊 (選填)
+        height_cm: values.height_cm,
+        weight_kg: values.weight_kg,
+        smoke_status: values.smoke_status,
       };
-
-      // 如果有健康資訊，也一併送出（後端目前不支援，但可預留）
-      if (values.medicalHistory) {
-        registerData.medical_history = values.medicalHistory;
-      }
-      if (values.emergencyContact) {
-        registerData.emergency_contact = values.emergencyContact;
-      }
 
       // 調用註冊 API
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
@@ -359,29 +355,6 @@ const RegisterPage = () => {
 
                 <Col xs={24} sm={12}>
                   <Form.Item
-                    label="年齡"
-                    name="age"
-                    rules={[
-                      { required: true, message: "請輸入年齡" },
-                      {
-                        type: "number",
-                        min: 18,
-                        max: 120,
-                        message: "年齡需在 18-120 之間",
-                      },
-                    ]}
-                  >
-                    <InputNumber
-                      style={{ width: "100%" }}
-                      placeholder="請輸入年齡"
-                      min={18}
-                      max={120}
-                    />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={12}>
-                  <Form.Item
                     label="性別"
                     name="gender"
                     rules={[{ required: true, message: "請選擇性別" }]}
@@ -405,16 +378,64 @@ const RegisterPage = () => {
                 健康資訊
               </Title>
 
-              <Form.Item label="病史或慢性疾病" name="medicalHistory">
-                <Input.TextArea
-                  rows={3}
-                  placeholder="請簡述您的重要病史、慢性疾病或正在服用的藥物（選填）"
-                />
-              </Form.Item>
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label="身高 (公分)"
+                    name="height_cm"
+                    rules={[
+                      {
+                        type: "number",
+                        min: 100,
+                        max: 250,
+                        message: "身高需在 100-250 公分之間",
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      placeholder="請輸入身高"
+                      min={100}
+                      max={250}
+                    />
+                  </Form.Item>
+                </Col>
 
-              <Form.Item label="緊急聯絡人" name="emergencyContact">
-                <Input placeholder="緊急聯絡人姓名和電話（選填）" />
-              </Form.Item>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label="體重 (公斤)"
+                    name="weight_kg"
+                    rules={[
+                      {
+                        type: "number",
+                        min: 30,
+                        max: 300,
+                        message: "體重需在 30-300 公斤之間",
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      placeholder="請輸入體重"
+                      min={30}
+                      max={300}
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col span={24}>
+                  <Form.Item
+                    label="吸菸狀態"
+                    name="smoke_status"
+                  >
+                    <Select placeholder="請選擇吸菸狀態（選填）">
+                      <Select.Option value="never">從不吸菸</Select.Option>
+                      <Select.Option value="former">已戒菸</Select.Option>
+                      <Select.Option value="current">目前吸菸</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
             </Card>
           </Form>
         </div>
