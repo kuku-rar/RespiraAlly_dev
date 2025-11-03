@@ -118,7 +118,9 @@ services:
         - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
     container_name: dev_web_app_service
     entrypoint: >
-      sh -lc "flask db upgrade heads && flask run --host=0.0.0.0 --port=5000 --debug"
+      sh -lc "flask db upgrade heads &&
+      python3 /usr/src/app/create_rich_menus.py || echo 'Warning: Rich menu creation failed' &&
+      flask run --host=0.0.0.0 --port=5000 --debug"
     ports:
       - "5001:5000"  # 修改為 5001 避免衝突
     env_file:
