@@ -14,6 +14,7 @@ from .api.education import education_bp  # Import education API blueprint
 from .api.overview import overview_bp  # Import overview API blueprint
 from .api.tasks import tasks_bp  # Import tasks API blueprint
 from .api.alerts import alerts_bp  # Import alerts API blueprint
+from .api.line_webhook import chat_bp  # Import LINE webhook API blueprint
 
 # 🔒 Debug端點在開發環境導入
 # 如果環境變量未設置，檢查 --debug 標誌（通過檢查是否在開發模式）
@@ -67,6 +68,7 @@ def create_app(config_name="default"):
     app.register_blueprint(overview_bp)  # Register the overview API blueprint
     app.register_blueprint(tasks_bp)  # Register the tasks API blueprint
     app.register_blueprint(alerts_bp)  # Register the alerts API blueprint
+    app.register_blueprint(chat_bp)  # Register the LINE webhook API blueprint
 
     # 🔒 Debug端點註冊（在開發環境或 debug 模式下）
     if debug_bp is not None and (os.getenv('FLASK_ENV') == 'development' or app.debug or config_name == 'default'):
