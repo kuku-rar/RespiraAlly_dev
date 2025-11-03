@@ -24,9 +24,9 @@ import {
   FireOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import liff from "@line/liff";
 
 import { useAccessibility } from "../../../shared/contexts/AccessibilityContext";
+import { useLIFF } from "../../../hooks/useLIFF";
 import bgImageUrl from "@assets/毛玻璃_BG2.png";
 
 const { Title, Text, Paragraph } = Typography;
@@ -34,6 +34,7 @@ const { Title, Text, Paragraph } = Typography;
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { speak, enableVoice } = useAccessibility();
+  const { isLoggedIn, profile, isReady, login } = useLIFF();
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
@@ -46,14 +47,12 @@ const RegisterPage = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // 確保 LIFF 已初始化
-      if (!liff.isLoggedIn()) {
+      // 確保已登入並有 profile 資料
+      if (!isLoggedIn || !profile) {
         message.error("請先登入 LINE");
+        login();
         return;
       }
-
-      // 獲取 LINE 使用者資料
-      const profile = await liff.getProfile();
 
       // 準備註冊資料
       const registerData = {
@@ -113,6 +112,57 @@ const RegisterPage = () => {
       setLoading(false);
     }
   };
+
+  // 等待 LIFF 初始化
+  if (!isReady) {
+    return (
+      <div className="register-page">
+        <style jsx>{`
+          .register-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        `}</style>
+        <Space direction="vertical" align="center" size="large">
+          <LoadingOutlined style={{ fontSize: 48, color: "#fff" }} />
+          <Text style={{ color: "#fff", fontSize: 18 }}>載入中...</Text>
+        </Space>
+      </div>
+    );
+  }
+
+  // 未登入時顯示登入提示
+  if (!isLoggedIn) {
+    return (
+      <div className="register-page">
+        <style jsx>{`
+          .register-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+          }
+        `}</style>
+        <Card style={{ maxWidth: 400, textAlign: "center" }}>
+          <Space direction="vertical" size="large">
+            <Avatar size={64} style={{ background: "#3b82f6" }}>
+              <UserOutlined />
+            </Avatar>
+            <Title level={3}>需要登入 LINE</Title>
+            <Text>請先登入 LINE 帳號以繼續註冊流程</Text>
+            <Button type="primary" size="large" onClick={login} block>
+              登入 LINE
+            </Button>
+          </Space>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="register-page">
