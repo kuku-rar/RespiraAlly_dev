@@ -45,18 +45,72 @@ const RegisterPage = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // TODO: 實際的註冊 API 調用
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // 模擬 API 調用
+      // 動態導入 LIFF SDK
+      const liff = (await import("@line/liff")).default;
+
+      // 確保 LIFF 已初始化
+      if (!liff.isLoggedIn()) {
+        message.error("請先登入 LINE");
+        return;
+      }
+
+      // 獲取 LINE 使用者資料
+      const profile = await liff.getProfile();
+
+      // 準備註冊資料
+      const registerData = {
+        lineUserId: profile.userId,
+        first_name: values.name?.split(" ")[0] || values.name || "",
+        last_name: values.name?.split(" ")[1] || "",
+        gender: values.gender,
+        phone: values.phone,
+      };
+
+      // 如果有健康資訊，也一併送出（後端目前不支援，但可預留）
+      if (values.medicalHistory) {
+        registerData.medical_history = values.medicalHistory;
+      }
+      if (values.emergencyContact) {
+        registerData.emergency_contact = values.emergencyContact;
+      }
+
+      // 調用註冊 API
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+      const response = await fetch(`${apiBaseUrl}/api/v1/auth/line/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(registerData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // 處理錯誤
+        const errorMessage =
+          data.error?.message || "註冊失敗，請稍後重試";
+        throw new Error(errorMessage);
+      }
+
+      // 儲存 token 到 localStorage
+      if (data.data?.token) {
+        localStorage.setItem("access_token", data.data.token);
+        localStorage.setItem("user_id", data.data.user.id);
+        localStorage.setItem("line_user_id", data.data.user.line_user_id);
+      }
 
       if (enableVoice) {
         speak("註冊成功！歡迎使用呼吸系統健康管理服務");
       }
 
       message.success("註冊成功！");
-      navigate("/liff/questionnaire/thankyou");
+
+      // 註冊成功後導向首頁
+      navigate("/liff");
     } catch (error) {
       console.error("註冊失敗:", error);
-      message.error("註冊失敗，請稍後重試");
+      message.error(error.message || "註冊失敗，請稍後重試");
     } finally {
       setLoading(false);
     }
