@@ -56,9 +56,9 @@ const RegisterPage = () => {
 
       // 準備註冊資料
       const registerData = {
-        lineUserId: profile.userId,
-        first_name: values.name?.split(" ")[0] || values.name || "",
-        last_name: values.name?.split(" ")[1] || "",
+        lineUserId: profile.userId, // 自動從 LIFF profile 抓取 LINE UID
+        first_name: values.firstName, // 名
+        last_name: values.lastName, // 姓
         gender: values.gender,
         phone: values.phone,
         // 健康資訊 (選填)
@@ -324,13 +324,23 @@ const RegisterPage = () => {
               </Title>
 
               <Row gutter={16}>
-                <Col span={24}>
+                <Col xs={24} sm={12}>
                   <Form.Item
-                    label="姓名"
-                    name="name"
-                    rules={[{ required: true, message: "請輸入您的姓名" }]}
+                    label="姓氏"
+                    name="lastName"
+                    rules={[{ required: true, message: "請輸入您的姓氏" }]}
                   >
-                    <Input placeholder="請輸入您的姓名" />
+                    <Input placeholder="例：陳" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label="名字"
+                    name="firstName"
+                    rules={[{ required: true, message: "請輸入您的名字" }]}
+                  >
+                    <Input placeholder="例：美麗" />
                   </Form.Item>
                 </Col>
 
