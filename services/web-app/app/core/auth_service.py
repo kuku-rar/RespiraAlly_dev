@@ -29,7 +29,9 @@ def login_line_user(line_user_id):
 
 def register_line_user(data):
     """
-    註冊新的 LINE 使用者，並建立健康檔案。
+    註冊或更新 LINE 使用者（Upsert 模式）
+    - 新用戶：建立帳號並建立健康檔案
+    - 現有用戶：更新所有欄位
     :param data: 包含註冊資訊的字典
     :return: (User, None) 或 (None, "錯誤訊息")
     """
@@ -41,11 +43,35 @@ def register_line_user(data):
         return None, "lineUserId, first_name, and last_name are required."
 
     repo = UserRepository()
-    if repo.find_by_line_user_id(line_user_id):
-        return None, "This LINE account is already registered."
+    existing_user = repo.find_by_line_user_id(line_user_id)
 
+    if existing_user:
+        # Update existing user (upsert mode)
+        existing_user.first_name = first_name
+        existing_user.last_name = last_name
+        existing_user.gender = data.get('gender')
+        existing_user.phone = data.get('phone')
+
+        # Update or create health profile
+        if existing_user.health_profile:
+            existing_user.health_profile.height_cm = data.get('height_cm')
+            existing_user.health_profile.weight_kg = data.get('weight_kg')
+            existing_user.health_profile.smoke_status = data.get('smoke_status')
+        else:
+            health_profile = HealthProfile(
+                user=existing_user,
+                height_cm=data.get('height_cm'),
+                weight_kg=data.get('weight_kg'),
+                smoke_status=data.get('smoke_status')
+            )
+            repo.add(health_profile)
+
+        repo.commit()
+        return existing_user, None
+
+    # Create new user
     new_account = f"line_user_{uuid.uuid4().hex[:12]}"
-    
+
     new_user = User(
         account=new_account,
         line_user_id=line_user_id,

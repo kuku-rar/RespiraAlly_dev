@@ -195,23 +195,20 @@ def handle_line_login():
         }
     ],
     'responses': {
-        '201': {'description': '註冊成功並自動登入'},
-        '400': {'description': '缺少必要欄位'},
-        '409': {'description': '使用者已存在'}
+        '201': {'description': '註冊成功並自動登入（新用戶或更新現有用戶）'},
+        '400': {'description': '缺少必要欄位'}
     }
 })
 def handle_line_register():
-    """處理 LINE 使用者註冊"""
+    """處理 LINE 使用者註冊或更新（Upsert 模式）"""
     data = request.get_json()
 
-    new_user, error_msg = register_line_user(data)
+    user, error_msg = register_line_user(data)
 
     if error_msg:
-        status_code = 409 if "already registered" in error_msg else 400
-        error_code = "USER_ALREADY_EXISTS" if status_code == 409 else "INVALID_INPUT"
-        return jsonify({"error": {"code": error_code, "message": error_msg}}), status_code
+        return jsonify({"error": {"code": "INVALID_INPUT", "message": error_msg}}), 400
 
-    # Link member rich menu upon successful registration
+    # Link member rich menu upon successful registration/update
     try:
         from ..core.line_service import get_line_service
         from flask import current_app
@@ -219,21 +216,21 @@ def handle_line_register():
         line_service = get_line_service()
         member_menu_id = current_app.config.get('LINE_RICH_MENU_ID_MEMBER')
         if member_menu_id:
-            line_service.link_rich_menu_to_user(new_user.line_user_id, member_menu_id)
-            logging.info(f"Successfully linked member rich menu to new user {new_user.id}")
+            line_service.link_rich_menu_to_user(user.line_user_id, member_menu_id)
+            logging.info(f"Successfully linked member rich menu to user {user.id}")
     except Exception as e:
-        logging.error(f"Failed to link rich menu for new user {new_user.id}: {e}", exc_info=True)
+        logging.error(f"Failed to link rich menu for user {user.id}: {e}", exc_info=True)
         # We don't fail the request for this, just log it.
 
-    identity = str(new_user.id)
+    identity = str(user.id)
     expires = timedelta(days=7)
     access_token = create_access_token(identity=identity, expires_delta=expires)
 
     user_info = {
-        "id": new_user.id,
-        "line_user_id": new_user.line_user_id,
-        "first_name": new_user.first_name,
-        "last_name": new_user.last_name
+        "id": user.id,
+        "line_user_id": user.line_user_id,
+        "first_name": user.first_name,
+        "last_name": user.last_name
     }
 
     return jsonify({
